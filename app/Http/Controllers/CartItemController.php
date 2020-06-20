@@ -3,9 +3,19 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\CartItem;
 
 class CartItemController extends Controller
 {
+
+
+    public function getItemsByCart($cart_id){
+        $items = CartItem::where('cart_id', $cart_id)->get();
+        return $items->toJson();
+    }
+
+    
+
     /**
      * Display a listing of the resource.
      *
@@ -34,7 +44,23 @@ class CartItemController extends Controller
      */
     public function store(Request $request)
     {
-        //
+
+        //create the post using Post Model
+        // CartItem::create([
+        //     'color' => $request->color,
+        //   'size' => $request->size,
+        //   'cart_id' => $request->cart_id,
+        //   'product_id' => $request->product_id
+        // ]);
+        
+        $cart_item = new CartItem();
+        $cart_item->color = $request->input('color');
+        $cart_item->size = $request->input('size');
+        $cart_item->cart_id = $request->input('cart_id');
+        $cart_item->product_id = $request->input('product_id');
+        // Log::debug('request ========== ' . $request);
+    	$cart_item->save();
+
     }
 
     /**
