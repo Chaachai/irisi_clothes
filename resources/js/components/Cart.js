@@ -1,124 +1,103 @@
 import React, { useState, useEffect } from "react";
 import Button from "react-bootstrap/Button";
-import { MDBTable, MDBTableBody, MDBTableHead } from "mdbreact";
-import { useHistory } from "react-router";
-import { forEach } from "lodash";
-import { data } from "jquery";
-import Axios from "axios";
+import "./../../css/index.css";
+import {
+    MDBTable,
+    MDBTableBody,
+    MDBTableHead,
+    MDBCard,
+    MDBCardImage
+} from "mdbreact";
 
 const Cart = ({ history }) => {
     const [cart, setCart] = useState({});
     const [items, setItems] = useState([]);
+    const [total, setTotal] = useState(0);
+
+    // const [value, setValue] = useState(0);
+
+    function calculateTotal(cart_id) {
+        axios
+            .get("/api/calculate_amount/" + cart_id)
+            .then(response => {
+                // console.log("SUM ==", response.data);
+                setTotal(response.data);
+            })
+            .catch(error => {
+                console.log(error.response.data.errors);
+            });
+    }
+
+    function decrease(cartItemId, val) {
+        if (val > 1) {
+            const postData = {
+                quantity: val - 1
+            };
+            axios
+                .put("/api/cart_items/" + cartItemId, postData)
+                .then(response => {
+                    console.log("was UPDATED !!!!", response);
+                })
+                .catch(error => {
+                    console.log(error.response.data.errors);
+                });
+            getCartItems();
+        }
+    }
+
+    function increase(cartItemId, val) {
+        const postData = {
+            quantity: val + 1
+        };
+        axios
+            .put("/api/cart_items/" + cartItemId, postData)
+            .then(response => {
+                console.log("was UPDATED !!!!", response);
+            })
+            .catch(error => {
+                console.log(error.response.data.errors);
+            });
+        getCartItems();
+    }
+
+    function handleRemove(cartItemId) {
+        console.log("cart item id", cartItemId);
+        axios
+            .delete("/api/cart_items/" + cartItemId)
+            .then(response => {
+                console.log("was deleted", response);
+            })
+            .catch(error => {
+                console.log(error.response.data.errors);
+            });
+        getCartItems();
+    }
 
     useEffect(() => {
-        // console.log("in use effect");
         getCartItems();
     }, []);
 
-    async function getProductById(product_id) {
-        console.log("in getProductById");
-
-        try {
-            const response = await fetch(`/api/products/${product_id}`);
-            const result = await response.json();
-            return result;
-        } catch (error) {
-            console.log("error", error);
-        }
-    }
-    function getPhotoByColor(product_id, color) {
-        return Axios.get(`/api/get_image/${product_id}/${color}`);
-        // var strr = new Array();
-        // console.log("in getPhotoByColor");
-        // axios
-        //     .get(`/api/get_image/${product_id}/${color}`)
-        //     .then(result => {
-        //         console.log("laaaaaaaa photo ", result);
-        //         return result.data;
-        //         // strr.push(result.data);
-        //         // setProductsG5(result.data);
-        //     })
-        //     .catch(err => {
-        //         console.log(err);
-        //     });
-        // return JSON.stringify(strr);
-    }
-
     async function getCartItems() {
-        console.log("in getCartItems");
-
         try {
             const response = await fetch(
                 `/api/getCartByUser/${
                     JSON.parse(localStorage["appState"]).user.id
                 }`
             );
-            let myData = [];
             const result = await response.json();
             setCart(result);
             getItems(result.id);
+            calculateTotal(result.id);
         } catch (error) {
             console.log("error", error);
         }
     }
 
     async function getItems(cart_id) {
-        console.log("in getItems");
-        let jsona = [];
         try {
-            const response = await fetch(`/api/items_by_cart/${cart_id}`);
+            const response = await fetch(`/api/get_items_by_photo/${cart_id}`);
             const result = await response.json();
-            let product = {};
-            var photos = [];
-            result.forEach(element => {
-                let obj = {};
-                // getProductById(element.product_id).then(data => {
-                //     product = data;
-                //     // console.log("PRODUUUUUUUUCT ", product);
-                // });
-
-                // getPhotoByColor(element.product_id, element.color).then(
-                //     data => {
-                //         photo = data;
-                //         // console.log("PRODUUUUUUUUCT ", photo);
-                //     }
-                // );
-
-                // photos.push(getPhotoByColor(element.product_id, element.color));
-
-                // var myJsonString = JSON.stringify(
-                let photo = getPhotoByColor(element.product_id, element.color);
-                // );
-
-                console.log("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH", photo);
-
-                // obj = {
-                //     mId: element.id,
-                //     mImage: photo.image,
-                //     mProduct: product.name,
-                //     mColor: element.color,
-                //     mSize: element.size,
-                //     mPrice: product.unit_price,
-                //     mQuantity: element.quantity
-                // };
-
-                // jsona.push(obj);
-            });
-            // console.log("LENGHTTTTTTTT == ", photos[0][1]);
-            // setItems(jsona);
-            // console.log("JISONAAAAA === ", jsona[0]);
-
-            // let a = [];
-
-            // for (let i = 0; i < jsona.length; i++) {
-            //     // let obj = jsona[i];
-            //     // a.push(obj);
-            //     console.log("Haaaaaaaa ", i);
-            // }
-            // localStorage["myState"] = JSON.stringify(a);
-            // console.log("ha localS", JSON.parse(localStorage["myState"]));
-
-            // setItems(JSON.parse(localStorage["cartState"]));
+            setItems(result);
         } catch (error) {
             console.log("error", error);
         }
@@ -130,44 +109,193 @@ const Cart = ({ history }) => {
     } else {
         console.log("in use render");
         return (
-            <div style={{ paddingTop: 66 }}>
-                {/* <h1>{{ items }}</h1> */}
-                <MDBTable>
-                    <MDBTableHead color="mdb-color" textWhite>
-                        <tr>
-                            <th>Product</th>
-                            <th>Color</th>
-                            <th>Size</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Amount</th>
-                            <th>Remove</th>
-                        </tr>
-                    </MDBTableHead>
-                    <MDBTableBody>
-                        {/* {items.map(item => ( */}
-                        <tr>
-                            <td>tbi</td>
-                            <td>tbi</td>
-                            <td>tbi</td>
-                            <td>tbi</td>
-                            <td>tbi</td>
-                            <td>tbi</td>
-                            <td>tbi</td>
-
-                            <td style={{ width: 20 }}>
-                                <Button
-                                    style={{ fontSize: 12 }}
-                                    variant="danger"
+            <section className="text-center my-5">
+                <h2 className="h1-responsive font-weight-bold text-center my-5">
+                    Shopping cart ({items.length})
+                </h2>
+                <div>
+                    <MDBTable>
+                        <MDBTableHead>
+                            <tr style={{ backgroundColor: "#cfcfcf" }}>
+                                <th
+                                    style={{
+                                        borderRight: "hidden",
+                                        borderLeft: "hidden"
+                                    }}
                                 >
-                                    Remove
-                                </Button>
-                            </td>
-                        </tr>
-                        {/* ))} */}
-                    </MDBTableBody>
-                </MDBTable>
-            </div>
+                                    Product
+                                </th>
+                                <th
+                                    style={{
+                                        borderLeft: "hidden"
+                                    }}
+                                ></th>
+                                <th>Color</th>
+                                <th>Size</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Amount</th>
+                                <th>Remove</th>
+                            </tr>
+                        </MDBTableHead>
+                        <MDBTableBody>
+                            {items.map(item => (
+                                <tr
+                                    style={{
+                                        backgroundColor: "white",
+                                        verticalAlign: "middle"
+                                    }}
+                                >
+                                    <td
+                                        style={{
+                                            borderRight: "hidden",
+                                            width: 200,
+                                            verticalAlign: "middle"
+                                        }}
+                                    >
+                                        <MDBCard className="align-items-center">
+                                            <MDBCardImage
+                                                src={
+                                                    "/images/photos/" +
+                                                    item.mImage
+                                                }
+                                                top
+                                                alt="sample photo"
+                                                overlay="white-slight"
+                                            />
+                                        </MDBCard>
+                                    </td>
+                                    <td
+                                        style={{
+                                            width: 230,
+                                            borderLeft: "hidden",
+                                            verticalAlign: "middle"
+                                        }}
+                                    >
+                                        <h6 style={{ fontWeight: "bold" }}>
+                                            {item.mProduct}
+                                        </h6>
+                                        <br />
+                                        {item.mDescription}
+                                    </td>
+                                    <td
+                                        style={{
+                                            verticalAlign: "middle"
+                                        }}
+                                    >
+                                        {item.mColor}
+                                    </td>
+                                    <td
+                                        style={{
+                                            verticalAlign: "middle"
+                                        }}
+                                    >
+                                        {item.mSize}
+                                    </td>
+                                    <td
+                                        style={{
+                                            verticalAlign: "middle"
+                                        }}
+                                    >
+                                        {item.mPrice} MAD
+                                    </td>
+                                    <td
+                                        style={{
+                                            width: 20,
+                                            verticalAlign: "middle"
+                                        }}
+                                    >
+                                        <div className="def-number-input number-input">
+                                            <button
+                                                onClick={() =>
+                                                    decrease(
+                                                        item.mId,
+                                                        item.mQuantity
+                                                    )
+                                                }
+                                                className="minus"
+                                            ></button>
+                                            <input
+                                                className="quantity"
+                                                name="quantity"
+                                                value={item.mQuantity}
+                                                onChange={() =>
+                                                    console.log("change")
+                                                }
+                                                type="number"
+                                            />
+                                            <button
+                                                onClick={() =>
+                                                    increase(
+                                                        item.mId,
+                                                        item.mQuantity
+                                                    )
+                                                }
+                                                className="plus"
+                                            ></button>
+                                        </div>
+                                    </td>
+                                    <td
+                                        style={{
+                                            verticalAlign: "middle"
+                                        }}
+                                    >
+                                        {item.mQuantity * item.mPrice} MAD
+                                    </td>
+
+                                    <td
+                                        style={{
+                                            width: 20,
+                                            verticalAlign: "middle"
+                                        }}
+                                    >
+                                        <Button
+                                            onClick={() =>
+                                                handleRemove(item.mId)
+                                            }
+                                            style={{
+                                                fontSize: 12,
+                                                borderRadius: 15
+                                            }}
+                                            variant="danger"
+                                        >
+                                            Remove
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))}
+                            <tr style={{ backgroundColor: "#cfcfcf" }}>
+                                <td nowrap colspan="8">
+                                    <h5
+                                        style={{
+                                            display: "inline"
+                                        }}
+                                    >
+                                        Total amount :
+                                    </h5>{" "}
+                                    <h5
+                                        style={{
+                                            fontWeight: "bold",
+                                            display: "inline"
+                                        }}
+                                    >
+                                        {total} MAD
+                                    </h5>{" "}
+                                    <Button
+                                        style={{
+                                            fontSize: 12,
+                                            borderRadius: 15
+                                        }}
+                                        variant="primary"
+                                    >
+                                        Pay now
+                                    </Button>
+                                </td>
+                            </tr>
+                        </MDBTableBody>
+                    </MDBTable>
+                </div>
+            </section>
         );
     }
 };
